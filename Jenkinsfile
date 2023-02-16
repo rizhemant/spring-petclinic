@@ -1,7 +1,12 @@
 pipeline {
-  agent any
+  agent {
+    node {
+      label 'test'
+    }
+
+  }
   stages {
-    stage('Compile') {
+    stage('compile') {
       steps {
         sh './mvnw clean compile'
       }
@@ -10,7 +15,7 @@ pipeline {
     stage('Static Analysis') {
       steps {
         sh '''./mvnw sonar:sonar \\
-  -Dsonar.host.url=http://172.31.20.46:9000/ \\
+  -Dsonar.host.url=http://172.31.20.46:9000 \\
   -Dsonar.projectKey=PetClinic \\
   -Dsonar.login=sqp_1a032cd7dca1b5a1799ff5eca053710c274870d0'''
       }
@@ -32,20 +37,15 @@ pipeline {
       parallel {
         stage('Deploy') {
           steps {
-            sh '''./mvnw spring-boot:run </dev/null &>/dev/null &
-'''
+            sh './mvnw spring-boot:run </dev/null &>/dev/null &'
           }
         }
 
-        stage('Integration and Performance Tests') {
-          agent {
-            node {
-              label 'test'
-            }
-
-          }
+        stage('Integration and Performance') {
           steps {
             sh './mvnw verify'
+            junit '**/target/surefire-reports/*.xml'
+            perfReport '**/target/jmeter/results/*'
           }
         }
 
